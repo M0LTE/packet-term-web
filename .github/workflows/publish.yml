@@ -35,24 +35,24 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
       - name: fetch OARC object storage CLI
         # Pulled fresh on every run — the CLI is small and OARC is the
         # canonical home for it. No vendoring + no version-pin: we always
-        # publish via the latest CLI the service ships.
+        # publish via the latest CLI the service ships. Installed into a
+        # venv to sidestep PEP 668 on system Python.
         run: |
           curl -fSL -o "${RUNNER_TEMP}/object-storage-cli.zip" \
             https://compute.oarc.uk/static/downloads/object-storage-cli.zip
           unzip -q "${RUNNER_TEMP}/object-storage-cli.zip" -d "${RUNNER_TEMP}"
-          pip install --quiet -r "${RUNNER_TEMP}/object-storage-cli/requirements.txt"
+          python3 -m venv "${RUNNER_TEMP}/venv"
+          "${RUNNER_TEMP}/venv/bin/pip" install --quiet -r \
+            "${RUNNER_TEMP}/object-storage-cli/requirements.txt"
 
       - name: upload index.html
         if: env.OARC_TOKEN != ''
         run: |
-          python3 "${RUNNER_TEMP}/object-storage-cli/object_storage_cli.py" \
+          "${RUNNER_TEMP}/venv/bin/python" \
+            "${RUNNER_TEMP}/object-storage-cli/object_storage_cli.py" \
             --token "${OARC_TOKEN}" \
             --upload index.html \
             --folder "${OARC_FOLDER_ID}" \
