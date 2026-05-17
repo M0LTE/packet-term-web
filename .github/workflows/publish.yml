@@ -1,0 +1,66 @@
+name: publish
+
+# Pushes index.html to OARC object storage (folder 4852 — the
+# packet-term.m0lte.uk static-site folder) on every push to main.
+# This repo is a single-file static demo, so the "build" is a no-op
+# and the only artefact is index.html itself.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - '.github/workflows/publish.yml'
+  workflow_dispatch:
+    # Manual force-publish — useful if you've redeployed by hand and
+    # want CI to re-establish the canonical state.
+
+concurrency:
+  # Don't overlap publishes — last writer wins is fine since we always
+  # upload index.html with --overwrite, but avoid the racy interleave.
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: upload index.html to OARC object storage
+    runs-on: [self-hosted, Linux, X64]
+    env:
+      OARC_TOKEN: ${{ secrets.OARC_TOKEN }}
+      # folder 4852 = packet-term.m0lte.uk static-site folder.
+      OARC_FOLDER_ID: '4852'
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: fetch OARC object storage CLI
+        # Pulled fresh on every run — the CLI is small and OARC is the
+        # canonical home for it. No vendoring + no version-pin: we always
+        # publish via the latest CLI the service ships.
+        run: |
+          curl -fSL -o "${RUNNER_TEMP}/object-storage-cli.zip" \
+            https://compute.oarc.uk/static/downloads/object-storage-cli.zip
+          unzip -q "${RUNNER_TEMP}/object-storage-cli.zip" -d "${RUNNER_TEMP}"
+          pip install --quiet -r "${RUNNER_TEMP}/object-storage-cli/requirements.txt"
+
+      - name: upload index.html
+        if: env.OARC_TOKEN != ''
+        run: |
+          python3 "${RUNNER_TEMP}/object-storage-cli/object_storage_cli.py" \
+            --token "${OARC_TOKEN}" \
+            --upload index.html \
+            --folder "${OARC_FOLDER_ID}" \
+            --overwrite \
+            --json
+
+      - name: fail if OARC_TOKEN missing
+        if: env.OARC_TOKEN == ''
+        run: |
+          echo "::error::OARC_TOKEN secret is not set on this repo — upload was skipped. Add it on the repo's settings page."
+          exit 1
