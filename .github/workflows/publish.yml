@@ -43,7 +43,8 @@ jobs:
         run: |
           curl -fSL -o "${RUNNER_TEMP}/object-storage-cli.zip" \
             https://compute.oarc.uk/static/downloads/object-storage-cli.zip
-          unzip -q "${RUNNER_TEMP}/object-storage-cli.zip" -d "${RUNNER_TEMP}"
+          # python -m zipfile avoids needing `unzip` on the runner image
+          python3 -m zipfile -e "${RUNNER_TEMP}/object-storage-cli.zip" "${RUNNER_TEMP}"
           python3 -m venv "${RUNNER_TEMP}/venv"
           "${RUNNER_TEMP}/venv/bin/pip" install --quiet -r \
             "${RUNNER_TEMP}/object-storage-cli/requirements.txt"
