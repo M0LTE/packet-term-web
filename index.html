@@ -429,7 +429,7 @@
       isResponse,
       pollFinal,
       PID_NO_LAYER_3,
-    } from 'https://esm.sh/@packet-net/ax25@0.2.1?deps=ax25sdl@0.6.0';
+    } from 'https://esm.sh/@packet-net/ax25@0.2.2';
 
     // ─── Terminal setup ────────────────────────────────────────────
     const term = new Terminal({
@@ -503,7 +503,7 @@
     // ─── Boot sequence ─────────────────────────────────────────────
     const boot = [
       ['PACKET TERMINAL v0.2.0',                AMBER],
-      ['@packet-net/ax25 0.2.1 · ax25sdl 0.6.0', DIM],
+      ['@packet-net/ax25 0.2.2 · ax25sdl 0.6.0', DIM],
       ['xterm.js 5.3.0',                         DIM],
       ['',                                       DIM],
       ['type HELP for the command list.',        DIM],
@@ -889,7 +889,7 @@
     function cmdVersion() {
       println('');
       println(`${BOLD}runtime${RESET}`, AMBER);
-      println(`  @packet-net/ax25 0.2.1`);
+      println(`  @packet-net/ax25 0.2.2`);
       println(`  ax25sdl          0.6.0`);
       println(`  xterm.js         5.3.0`);
       println(`  source           https://github.com/M0LTE/packet-term-web`);
