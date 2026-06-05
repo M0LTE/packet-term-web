@@ -415,9 +415,21 @@
 
   <script type="module">
     // ─── Imports (ESM CDN — no build step) ─────────────────────────
-    import { Terminal } from 'https://esm.sh/xterm@5.3.0';
-    import { FitAddon } from 'https://esm.sh/xterm-addon-fit@0.8.0';
-    import {
+    // Package specs are the SINGLE SOURCE OF TRUTH for both the import URL and
+    // the on-screen version readout (the boot banner + the VERSION command), so
+    // the displayed versions can never drift from what is actually loaded —
+    // bump a version here only.
+    const PKG = {
+      ax25:     '@packet-net/ax25@0.7.0',
+      xterm:    'xterm@5.3.0',
+      xtermFit: 'xterm-addon-fit@0.8.0',
+    };
+    const esm   = (spec) => `https://esm.sh/${spec}`;
+    const verOf = (spec) => spec.slice(spec.lastIndexOf('@') + 1); // "@scope/n@1.2.3" -> "1.2.3"
+
+    const { Terminal } = await import(esm(PKG.xterm));
+    const { FitAddon } = await import(esm(PKG.xtermFit));
+    const {
       Ax25Listener,
       WebSerialKissTransport,
       Callsign,
@@ -429,7 +441,15 @@
       isResponse,
       pollFinal,
       PID_NO_LAYER_3,
-    } from 'https://esm.sh/@packet-net/ax25@0.6.1';
+    } = await import(esm(PKG.ax25));
+
+    // ax25sdl is a transitive dependency of @packet-net/ax25 — read its version
+    // from the loaded package's manifest so the readout matches what shipped.
+    let ax25sdlVersion = '—';
+    try {
+      const manifest = await fetch(`${esm(PKG.ax25)}/package.json`).then((r) => r.json());
+      ax25sdlVersion = (manifest.dependencies?.ax25sdl ?? '').replace(/^\D*/, '') || ax25sdlVersion;
+    } catch { /* offline / CDN hiccup: leave the em dash */ }
 
     // ─── Terminal setup ────────────────────────────────────────────
     const term = new Terminal({
@@ -503,8 +523,8 @@
     // ─── Boot sequence ─────────────────────────────────────────────
     const boot = [
       ['PACKET TERMINAL v0.2.0',                AMBER],
-      ['@packet-net/ax25 0.2.2 · ax25sdl 0.6.0', DIM],
-      ['xterm.js 5.3.0',                         DIM],
+      [`@packet-net/ax25 ${verOf(PKG.ax25)} · ax25sdl ${ax25sdlVersion}`, DIM],
+      [`xterm.js ${verOf(PKG.xterm)}`,           DIM],
       ['',                                       DIM],
       ['type HELP for the command list.',        DIM],
       ['press ATTACH MODEM to bind a USB serial KISS modem.', DIM],
@@ -889,9 +909,9 @@
     function cmdVersion() {
       println('');
       println(`${BOLD}runtime${RESET}`, AMBER);
-      println(`  @packet-net/ax25 0.2.2`);
-      println(`  ax25sdl          0.6.0`);
-      println(`  xterm.js         5.3.0`);
+      println(`  @packet-net/ax25 ${verOf(PKG.ax25)}`);
+      println(`  ax25sdl          ${ax25sdlVersion}`);
+      println(`  xterm.js         ${verOf(PKG.xterm)}`);
       println(`  source           https://github.com/M0LTE/packet-term-web`);
       println('');
     }
